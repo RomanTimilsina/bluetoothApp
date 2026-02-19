@@ -292,12 +292,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import android.bluetooth.BluetoothSocket
+import android.util.Log
+import java.io.IOException
+import android.bluetooth.BluetoothServerSocket
+
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val NAME = "MyAppBluetoothServer"
+        private val MY_UUID = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+    }
+
+    val uuid = java.util.UUID.fromString(
+        "00001101-0000-1000-8000-00805F9B34FB"
+    )
 
     private lateinit var bluetoothAdapter: BluetoothAdapter
 
-    val devicesList = mutableStateListOf<String>()
+    val devicesList = mutableStateListOf<BluetoothDevice>()
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -307,18 +322,103 @@ class MainActivity : ComponentActivity() {
                 if (device != null) {
                     val name = device.name ?: "Unknown"
                     val address = device.address
-                    val info = "$name\n$address"
-                    if (!devicesList.contains(info)) {
-                        devicesList.add(info)
-                        Toast.makeText(context, "Found: $info", Toast.LENGTH_SHORT).show()
+                    if ( name != "Unknown") {
+                        val info = "$name\n$address"
+                        if (!devicesList.contains(device)) {
+                            devicesList.add(device)
+                            Toast.makeText(context, "Found: $info", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
         }
     }
 
+    private fun connectToDevice(device: BluetoothDevice) {
+
+        Thread {
+
+            try {
+
+                runOnUiThread {
+                    Toast.makeText(this, "Connecting to ${device.name}", Toast.LENGTH_SHORT).show()
+                }
+
+                bluetoothAdapter.cancelDiscovery()
+
+//                val uuid = java.util.UUID.fromString(
+//                    "00001101-0000-1000-8000-00805F9B34FB"
+//                )
+
+                val socket = device.createRfcommSocketToServiceRecord(uuid)
+
+                socket.connect()
+
+                runOnUiThread {
+                    Toast.makeText(this, "Connected to ${device.name}", Toast.LENGTH_LONG).show()
+                }
+
+            } catch (e: Exception) {
+
+                runOnUiThread {
+                    Toast.makeText(this, "Connection failed", Toast.LENGTH_LONG).show()
+                }
+
+                e.printStackTrace()
+            }
+
+        }.start()
+    }
+
+    private var acceptThread: AcceptThread? = null
+
+    private inner class AcceptThread : Thread() {
+
+        private val mmServerSocket: BluetoothServerSocket? by lazy(LazyThreadSafetyMode.NONE) {
+            bluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord(NAME, uuid)
+        }
+
+        override fun run() {
+            var shouldLoop = true
+            while (shouldLoop) {
+                val socket: BluetoothSocket? = try {
+                    mmServerSocket?.accept() // Blocks until a client connects
+                } catch (e: IOException) {
+                    Log.e(TAG, "Socket's accept() method failed", e)
+                    shouldLoop = false
+                    null
+                }
+
+                socket?.also {
+                    // Connection accepted, now handle communication
+//                    manageMyConnectedSocket(it)
+
+                    // Close server socket to stop listening after first connection
+                    try { mmServerSocket?.close() } catch (_: IOException) {}
+                    shouldLoop = false
+                }
+            }
+        }
+
+        fun cancel() {
+            try {
+                mmServerSocket?.close()
+            } catch (e: IOException) {
+                Log.e(TAG, "Could not close the server socket", e)
+            }
+        }
+    }
+
+    fun startServer() {
+        acceptThread = AcceptThread()
+        acceptThread?.start()d
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         if (bluetoothAdapter == null) {
@@ -352,6 +452,9 @@ class MainActivity : ComponentActivity() {
             permissionList.add(Manifest.permission.BLUETOOTH_CONNECT)
         }
         permissionLauncher.launch(permissionList.toTypedArray())
+
+
+
 
         setContent {
             MaterialTheme {
@@ -411,7 +514,19 @@ class MainActivity : ComponentActivity() {
                             Text("Scan Nearby Bluetooth Devices", fontSize = 18.sp)
                         }
 
+
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            {
+                                startServer()
+                            }
+                        ) {
+                            Text("Start Server")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
 
                         LazyColumn(
                             modifier = Modifier
@@ -419,11 +534,35 @@ class MainActivity : ComponentActivity() {
                                 .weight(1f)
                                 .padding(16.dp)
                         ) {
+
                             items(devicesList) { device ->
-                                Text(text = device, fontSize = 16.sp)
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            connectToDevice(device)
+
+//                                            acceptThread?.start()
+                                        }
+                                        .padding(12.dp)
+                                ) {
+
+                                    Text(
+                                        text = device.name ?: "Unknown",
+                                        fontSize = 18.sp
+                                    )
+
+                                    Text(
+                                        text = device.address,
+                                        fontSize = 14.sp
+                                    )
+                                }
+
                                 Divider()
                             }
                         }
+
                     }
                 }
             }
