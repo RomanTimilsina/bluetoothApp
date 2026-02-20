@@ -334,6 +334,87 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun manageMyConnectedSocket(socket: BluetoothSocket) {
+//        BluetoothConnectionManager.socket = socket
+//        BluetoothConnectionManager.startListening()
+
+//
+//        BluetoothConnectionManager.socket = socket
+//
+        runOnUiThread {
+
+            Toast.makeText(
+                this,
+                "Connection successful",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            val intent = Intent(this, ChatActivity::class.java)
+            startActivity(intent)
+        }
+//
+        Thread {
+
+            try {
+
+                val inputStream = socket.inputStream
+                val outputStream = socket.outputStream
+
+                // Example: send message
+                val message = "Hello from ${bluetoothAdapter.name}"
+                outputStream.write(message.toByteArray())
+
+                // Listen for incoming messages
+                val buffer = ByteArray(1024)
+
+                while (true) {
+
+                    val bytes = inputStream.read(buffer)
+
+                    val receivedMessage = String(buffer, 0, bytes)
+
+                    runOnUiThread {
+
+                        ChatActivity.messages.add(
+                            ChatMessage(
+                                text = receivedMessage,
+                                isMine = false
+                            )
+                        )
+
+                    }
+
+
+                    runOnUiThread {
+
+                        Toast.makeText(
+                            this,
+                            "Received: $receivedMessage",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                    }
+//                    BluetoothConnectionManager.receiveCallback?.invoke(receivedMessage)
+
+                }
+//
+            } catch (e: IOException) {
+
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        "Connection lost",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+                e.printStackTrace()
+            }
+
+        }.start()
+    }
+
+
     private fun connectToDevice(device: BluetoothDevice) {
 
         Thread {
@@ -353,6 +434,8 @@ class MainActivity : ComponentActivity() {
                 val socket = device.createRfcommSocketToServiceRecord(uuid)
 
                 socket.connect()
+
+                manageMyConnectedSocket(socket)
 
                 runOnUiThread {
                     Toast.makeText(this, "Connected to ${device.name}", Toast.LENGTH_LONG).show()
@@ -391,7 +474,7 @@ class MainActivity : ComponentActivity() {
 
                 socket?.also {
                     // Connection accepted, now handle communication
-//                    manageMyConnectedSocket(it)
+                    manageMyConnectedSocket(it)
 
                     // Close server socket to stop listening after first connection
                     try { mmServerSocket?.close() } catch (_: IOException) {}
@@ -411,7 +494,7 @@ class MainActivity : ComponentActivity() {
 
     fun startServer() {
         acceptThread = AcceptThread()
-        acceptThread?.start()d
+        acceptThread?.start()
     }
 
 
