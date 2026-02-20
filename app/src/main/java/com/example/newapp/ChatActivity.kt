@@ -30,6 +30,8 @@ class ChatActivity : ComponentActivity() {
 
     companion object {
         val messages = mutableStateListOf<ChatMessage>()
+
+        var sendCallback: ((String) -> Unit)? = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,7 +143,7 @@ fun ChatScreen(onBackClick: () -> Unit) {
                                 )
                             )
 
-                            BluetoothConnectionManager.sendMessage(inputText)
+                            ChatActivity.sendCallback?.invoke(inputText)
 
                             inputText = ""
                         }

@@ -361,8 +361,22 @@ class MainActivity : ComponentActivity() {
                 val outputStream = socket.outputStream
 
                 // Example: send message
-                val message = "Hello from ${bluetoothAdapter.name}"
-                outputStream.write(message.toByteArray())
+//                val message = "Hello from ${bluetoothAdapter.name}"
+//                outputStream.write(message.toByteArray())
+
+                ChatActivity.sendCallback = { message ->
+
+                    Thread {
+                        try {
+
+                            outputStream.write(message.toByteArray())
+
+                        } catch (e: IOException) {
+                            e.printStackTrace()
+                        }
+                    }.start()
+
+                }
 
                 // Listen for incoming messages
                 val buffer = ByteArray(1024)
