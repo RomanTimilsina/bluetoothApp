@@ -377,6 +377,10 @@ class MainActivity : ComponentActivity() {
 
                 }
 
+                ChatActivity.closeConnection = {
+                    socket.close()
+                }
+
                 // Listen for incoming messages
                 val buffer = ByteArray(1024)
 
@@ -407,7 +411,7 @@ class MainActivity : ComponentActivity() {
                 }
 //
             } catch (e: IOException) {
-
+                ChatActivity.onConnectionLost?.invoke()
                 runOnUiThread {
                     Toast.makeText(
                         this,

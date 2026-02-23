@@ -40,10 +40,17 @@ class ChatActivity : ComponentActivity() {
 //        val messages = mutableStateListOf<ChatMessage>()
 
         var sendCallback: ((String) -> Unit)? = null
+        var closeConnection: (() -> Unit)? = null
+
+        var onConnectionLost: (() -> Unit)? = null
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        onConnectionLost = {
+            finish()
+        }
 
         ChatViewModelHolder.viewModel = viewModel
 
@@ -55,6 +62,7 @@ class ChatActivity : ComponentActivity() {
                 ChatScreen(
                     viewModel = viewModel,
                     onBackClick = {
+                        closeConnection?.invoke()
                         finish()
                     }
                 )
@@ -63,6 +71,8 @@ class ChatActivity : ComponentActivity() {
     }
 
     override fun onBackPressed() {
+        closeConnection?.invoke()
+
         super.onBackPressed()
     }
 }
