@@ -303,7 +303,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG = "MainActivity"
         private const val NAME = "MyAppBluetoothServer"
-        private val MY_UUID = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 
     val uuid = java.util.UUID.fromString(
@@ -389,12 +388,7 @@ class MainActivity : ComponentActivity() {
 
                     runOnUiThread {
 
-                        ChatActivity.messages.add(
-                            ChatMessage(
-                                text = receivedMessage,
-                                isMine = false
-                            )
-                        )
+                        ChatViewModelHolder.viewModel.receiveMessage(receivedMessage)
 
                     }
 

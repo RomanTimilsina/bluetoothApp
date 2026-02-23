@@ -18,18 +18,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.viewModels
 
-data class ChatMessage(
-    val text: String,
-    val isMine: Boolean
-)
+
+//data class ChatMessage(
+//    val text: String,
+//    val isMine: Boolean
+//)
+
+object ChatViewModelHolder {
+    lateinit var viewModel: ChatViewModel
+}
 
 class ChatActivity : ComponentActivity() {
 
+    private val viewModel: ChatViewModel by viewModels()
 
 
     companion object {
-        val messages = mutableStateListOf<ChatMessage>()
+//        val messages = mutableStateListOf<ChatMessage>()
 
         var sendCallback: ((String) -> Unit)? = null
     }
@@ -37,11 +45,16 @@ class ChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        ChatViewModelHolder.viewModel = viewModel
+
         setContent {
             MaterialTheme {
+
+//                val viewModel: ChatViewModel = viewModel()
+
                 ChatScreen(
+                    viewModel = viewModel,
                     onBackClick = {
-                        BluetoothConnectionManager.closeConnection()
                         finish()
                     }
                 )
@@ -50,7 +63,6 @@ class ChatActivity : ComponentActivity() {
     }
 
     override fun onBackPressed() {
-        BluetoothConnectionManager.closeConnection()
         super.onBackPressed()
     }
 }
@@ -58,12 +70,14 @@ class ChatActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(onBackClick: () -> Unit) {
+fun ChatScreen(
+    viewModel: ChatViewModel,
+    onBackClick: () -> Unit
+) {
 
-    val messages = ChatActivity.messages
+    val messages = viewModel.messages
     var inputText by remember { mutableStateOf("") }
 
-    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -136,12 +150,7 @@ fun ChatScreen(onBackClick: () -> Unit) {
                     onClick = {
                         if (inputText.isNotBlank()) {
 
-                            ChatActivity.messages.add(
-                                ChatMessage(
-                                    text = inputText,
-                                    isMine = true
-                                )
-                            )
+                            viewModel.sendMessage(inputText)
 
                             ChatActivity.sendCallback?.invoke(inputText)
 
